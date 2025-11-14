@@ -3,20 +3,19 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const fetch = require('node-fetch');  // API request ke liye
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-// Ensure uploads folder exists
+// Create uploads folder if missing
 const uploadPath = 'uploads/';
 if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
 }
 
-// Serve static files
+// Serve uploaded images
 app.use(express.static(uploadPath));
 
 // Multer setup
@@ -26,11 +25,11 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// 📌 Brevo API Key (ENV me add karna hoga)
+// ENV variables
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_EMAIL = process.env.BREVO_EMAIL;
 
-// Upload Route
+// Upload route
 app.post('/upload', upload.single('photo'), async (req, res) => {
 
     if (!req.file) {
@@ -40,12 +39,11 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
     const backendUrl = 'https://photo-backend-2nd.onrender.com';
     const photoURL = `${backendUrl}/${req.file.filename}`;
 
-    // 📩 Brevo API email payload
     const emailData = {
         sender: { email: BREVO_EMAIL },
         to: [{ email: BREVO_EMAIL }],
         subject: "New Photo Uploaded",
-        htmlContent: `<p>A new photo was uploaded:</p><br><a href="${photoURL}">${photoURL}</a>`
+        htmlContent: `<p>New photo uploaded:</p><br><a href="${photoURL}">${photoURL}</a>`
     };
 
     try {
@@ -59,7 +57,6 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
         });
 
         const result = await response.json();
-
         console.log("Brevo API response:", result);
 
         res.json({
