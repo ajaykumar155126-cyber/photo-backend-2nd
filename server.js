@@ -31,44 +31,50 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Gmail Notification Setup
+
+// 🔥 Brevo SMTP Mailer (100% working on Render Free)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: "smtp-relay.brevo.com",
+    port: 587,
+    secure: false,
     auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD,
+        user: process.env.BREVO_EMAIL,       // SMTP login
+        pass: process.env.BREVO_SMTP_KEY,    // SMTP key / password
     },
 });
 
+
 // Route to Upload Photo
 app.post('/upload', upload.single('photo'), (req, res) => {
-    // Check if file exists
+
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const backendUrl = 'https://photo-backend-2nd.onrender.com'; // Render URL
+    const backendUrl = 'https://photo-backend-2nd.onrender.com';
     const photoURL = `${backendUrl}/${req.file.filename}`;
 
-    // Send Email Notification
+    // Email Data
     const mailOptions = {
-        from: process.env.EMAIL,
-        to: process.env.EMAIL,
+        from: process.env.BREVO_EMAIL,
+        to: process.env.BREVO_EMAIL,
         subject: 'New Photo Uploaded',
-        text: `A new photo has been uploaded. You can access it here: ${photoURL}`,
+        text: `A new photo has been uploaded. View it here: ${photoURL}`,
     };
 
+    // Send Email
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
             console.error('Error sending email:', error);
             return res.status(500).json({ error: 'Failed to send email' });
-        } else {
-            console.log('Email sent:', info.response);
-            res.json({
-                message: 'Photo uploaded successfully!',
-                filePath: photoURL,
-            });
         }
+
+        console.log('Email sent:', info.response);
+
+        res.json({
+            message: 'Photo uploaded successfully!',
+            filePath: photoURL,
+        });
     });
 });
 
