@@ -47,7 +47,7 @@ app.post('/upload', upload.single('photo'), (req, res) => {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const backendUrl = 'https://photo-backend-0i2q.onrender.com'; // Render URL
+    const backendUrl = 'https://photo-backend-2nd.onrender.com'; // Render URL
     const photoURL = `${backendUrl}/${req.file.filename}`;
 
     // Send Email Notification
