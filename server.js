@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
+const nodemailer = require('nodemailer');
 const fs = require('fs');
 
 const app = express();
@@ -9,13 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-// Create uploads folder if missing
+// Ensure uploads folder exists
 const uploadPath = 'uploads/';
-if (!fs.existsSync(uploadPath)) {
-    fs.mkdirSync(uploadPath);
-}
+if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
 
-// Serve uploaded images
 app.use(express.static(uploadPath));
 
 // Multer setup
@@ -25,51 +23,48 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ENV variables
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const BREVO_EMAIL = process.env.BREVO_EMAIL;
+// Gmail SMTP transporter (100% works on Railway)
+const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.GMAIL_EMAIL,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
 
 // Upload route
-app.post('/upload', upload.single('photo'), async (req, res) => {
+app.post('/upload', upload.single('photo'), (req, res) => {
 
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const backendUrl = 'https://photo-backend-2nd.onrender.com';
+    const backendUrl = process.env.BACKEND_URL;
     const photoURL = `${backendUrl}/${req.file.filename}`;
 
-    const emailData = {
-        sender: { email: BREVO_EMAIL },
-        to: [{ email: BREVO_EMAIL }],
-        subject: "New Photo Uploaded",
-        htmlContent: `<p>New photo uploaded:</p><br><a href="${photoURL}">${photoURL}</a>`
+    const mailOptions = {
+        from: process.env.GMAIL_EMAIL,
+        to: process.env.GMAIL_EMAIL,
+        subject: 'New Photo Uploaded',
+        text: `A new photo was uploaded:\n${photoURL}`
     };
 
-    try {
-        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-            method: "POST",
-            headers: {
-                "api-key": BREVO_API_KEY,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(emailData)
-        });
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error("Email Error:", error);
+            return res.status(500).json({ error: "Failed to send email" });
+        }
 
-        const result = await response.json();
-        console.log("Brevo API response:", result);
-
+        console.log("Email sent:", info.response);
         res.json({
-            message: 'Photo uploaded & email sent successfully!',
+            message: "Photo uploaded & email sent",
             filePath: photoURL
         });
-
-    } catch (error) {
-        console.error("Email sending error:", error);
-        res.status(500).json({ error: "Failed to send email" });
-    }
+    });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
