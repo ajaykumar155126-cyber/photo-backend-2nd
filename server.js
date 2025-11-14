@@ -52,8 +52,8 @@ app.post('/upload', upload.single('photo'), (req, res) => {
 
     // Send Email Notification
     const mailOptions = {
-        from: 'pritamgamer8127@gmail.com',
-        to: 'pritamgamer8127@gmail.com',
+        from: process.env.EMAIL,
+        to: process.env.EMAIL,
         subject: 'New Photo Uploaded',
         text: `A new photo has been uploaded. You can access it here: ${photoURL}`,
     };
